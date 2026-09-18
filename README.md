@@ -57,7 +57,7 @@ Clone the repository and install dependencies using `uv`:
 
 ```bash
 git clone <repository-url>
-cd SLM-Router
+cd slm-router
 uv sync
 ```
 
