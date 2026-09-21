@@ -5,7 +5,7 @@ import sys
 import urllib.request
 import urllib.error
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "http://127.0.0.1:8008"
 
 
 def make_request(method: str, path: str, payload: dict = None) -> dict:
@@ -20,7 +20,7 @@ def make_request(method: str, path: str, payload: dict = None) -> dict:
     except urllib.error.URLError as e:
         print(f"Error connecting to SLM Router API at {url}: {e}")
         print("Please ensure the FastAPI server is running with:")
-        print("  uv run uvicorn --app-dir src slm_router.api:app --host 127.0.0.1 --port 8000")
+        print("  uv run uvicorn --app-dir src slm_router.api:app --host 127.0.0.1 --port 8008")
         sys.exit(1)
 
 

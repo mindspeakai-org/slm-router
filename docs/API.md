@@ -2,7 +2,7 @@
 
 The SLM Router exposes a lightweight FastAPI HTTP interface that wraps the underlying `Router` and `ClassifierV3` pipeline.
 
-The API runs by default on `http://127.0.0.1:8000`.
+The API runs by default on `http://127.0.0.1:8008`.
 
 ---
 
@@ -14,7 +14,7 @@ The API runs by default on `http://127.0.0.1:8000`.
 
 To start the server:
 ```bash
-uv run uvicorn --app-dir src slm_router.api:app --host 127.0.0.1 --port 8000
+uv run uvicorn --app-dir src slm_router.api:app --host 127.0.0.1 --port 8008
 ```
 
 ---
@@ -53,7 +53,7 @@ Confirms that the FastAPI service is active and dynamically returns the identifi
 
 ### Example Curl
 ```bash
-curl -s http://127.0.0.1:8000/health
+curl -s http://127.0.0.1:8008/health
 ```
 
 ---
@@ -95,7 +95,7 @@ Executes on-device 3-way classification triage using `ClassifierV3` without exec
 
 ### Example Curl
 ```bash
-curl -s -X POST http://127.0.0.1:8000/classify \
+curl -s -X POST http://127.0.0.1:8008/classify \
   -H "Content-Type: application/json" \
   -d '{"query": "Turn off the office fan."}'
 ```
@@ -140,7 +140,7 @@ Runs the complete end-to-end `Router.route()` pipeline:
 #### A. LOCAL Route Example
 **Request:**
 ```bash
-curl -s -X POST http://127.0.0.1:8000/route \
+curl -s -X POST http://127.0.0.1:8008/route \
   -H "Content-Type: application/json" \
   -d '{"query": "What is 2 + 2?"}'
 ```
@@ -173,7 +173,7 @@ curl -s -X POST http://127.0.0.1:8000/route \
 #### B. COMMAND Route Example
 **Request:**
 ```bash
-curl -s -X POST http://127.0.0.1:8000/route \
+curl -s -X POST http://127.0.0.1:8008/route \
   -H "Content-Type: application/json" \
   -d '{"query": "Turn on the light."}'
 ```
@@ -209,7 +209,7 @@ curl -s -X POST http://127.0.0.1:8000/route \
 #### C. CLOUD Route Example
 **Request:**
 ```bash
-curl -s -X POST http://127.0.0.1:8000/route \
+curl -s -X POST http://127.0.0.1:8008/route \
   -H "Content-Type: application/json" \
   -d '{"query": "Write a 3000-word research essay on artificial intelligence."}'
 ```
