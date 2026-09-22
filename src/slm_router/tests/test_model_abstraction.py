@@ -69,37 +69,49 @@ class TestModelAbstraction(unittest.TestCase):
 
     def test_classifier_v3_works_with_generic_base_model(self):
         """Verify ClassifierV3 works seamlessly with any BaseModel implementation."""
-        dummy_model = DummyModel(response="COMMAND")
+        dummy_model = DummyModel(
+            response='{"processing": "LOCAL", "memory_required": false, "memory_request": null}'
+        )
         classifier = ClassifierV3(model=dummy_model)
 
         self.assertIs(classifier.model, dummy_model)
         self.assertIs(classifier.slm, dummy_model)
 
-        label, raw = classifier.classify_with_raw("Turn off the lights.")
-        self.assertEqual(label, "COMMAND")
-        self.assertEqual(raw, "COMMAND")
+        decision, raw = classifier.classify_with_raw("Turn off the lights.")
+        self.assertEqual(decision.processing, "LOCAL")
+        self.assertFalse(decision.memory_required)
+        self.assertIsNone(decision.memory_request)
 
         # Verify arguments passed to generate
-        self.assertEqual(dummy_model.last_generate_kwargs["max_new_tokens"], 4)
+        self.assertEqual(dummy_model.last_generate_kwargs["max_new_tokens"], 100)
         self.assertFalse(dummy_model.last_generate_kwargs["do_sample"])
         messages = dummy_model.last_generate_kwargs["messages"]
         self.assertEqual(len(messages), 2)
-        self.assertEqual(messages[1]["content"], "Turn off the lights.")
+        self.assertIn("Turn off the lights.", messages[1]["content"])
 
     def test_classifier_v3_backward_compatibility_positional_slm(self):
         """Verify ClassifierV3 accepts positional model argument and sets .slm alias."""
-        dummy_model = DummyModel(response="CLOUD")
+        dummy_model = DummyModel(
+            response='{"processing": "CLOUD", "memory_required": false, "memory_request": null}'
+        )
         classifier = ClassifierV3(dummy_model)
 
         self.assertIs(classifier.model, dummy_model)
         self.assertIs(classifier.slm, dummy_model)
-        self.assertEqual(classifier.classify("Write an essay on AI."), "CLOUD")
+        decision = classifier.classify("Write an essay on AI.")
+        self.assertEqual(decision.processing, "CLOUD")
 
     def test_router_works_with_generic_base_model(self):
         """Verify Router works seamlessly with any BaseModel implementation."""
         dummy_model = DummyModel(response="Simulated local response")
         mock_classifier = MagicMock()
-        mock_classifier.classify_with_raw.return_value = ("LOCAL", "LOCAL")
+        mock_decision = MagicMock()
+        mock_decision.model_dump.return_value = {
+            "processing": "LOCAL",
+            "memory_required": False,
+            "memory_request": None,
+        }
+        mock_classifier.classify_with_raw.return_value = (mock_decision, "raw")
 
         router = Router(
             model=dummy_model,
@@ -111,15 +123,21 @@ class TestModelAbstraction(unittest.TestCase):
         self.assertIs(router.slm, dummy_model)
 
         res = router.route("What is photosynthesis?")
-        self.assertEqual(res["route"], "LOCAL")
-        self.assertEqual(res["response"], "Simulated local response")
-        self.assertTrue(res["success"])
+        self.assertEqual(res["processing"], "LOCAL")
+        self.assertFalse(res["memory_required"])
+        self.assertIsNone(res["memory_request"])
 
     def test_router_backward_compatibility_slm_kwarg(self):
         """Verify Router accepts slm kwarg for backwards compatibility."""
         dummy_model = DummyModel(response="Simulated command response")
         mock_classifier = MagicMock()
-        mock_classifier.classify_with_raw.return_value = ("COMMAND", "COMMAND")
+        mock_decision = MagicMock()
+        mock_decision.model_dump.return_value = {
+            "processing": "LOCAL",
+            "memory_required": True,
+            "memory_request": {"keys": ["light_status"]},
+        }
+        mock_classifier.classify_with_raw.return_value = (mock_decision, "raw")
 
         router = Router(
             slm=dummy_model,
@@ -131,8 +149,9 @@ class TestModelAbstraction(unittest.TestCase):
         self.assertIs(router.slm, dummy_model)
 
         res = router.route("Turn on the lamp.")
-        self.assertEqual(res["route"], "COMMAND")
-        self.assertEqual(res["response"], "Simulated command response")
+        self.assertEqual(res["processing"], "LOCAL")
+        self.assertTrue(res["memory_required"])
+        self.assertEqual(res["memory_request"]["keys"], ["light_status"])
 
     def test_backward_compatibility_slm_module(self):
         """Verify slm_router.model.SLM preserves inheritance and defaults."""

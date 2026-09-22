@@ -29,17 +29,16 @@ def main():
     health = make_request("GET", "/health")
     print(f"   Status: {health.get('status')} | Active Model: {health.get('model')}\n")
 
-    query = "What is 2 + 2?"
-    print(f"2. Classifying Query: {query!r}...")
-    classification = make_request("POST", "/classify", {"query": query})
-    print(f"   Assigned Label: {classification.get('label')}\n")
+    queries = [
+        "Tell me a joke.",
+        "What is my favorite animal?",
+        "What is the weather today?",
+    ]
 
-    print(f"3. Routing Query: {query!r}...")
-    routed = make_request("POST", "/route", {"query": query})
-    print(f"   Route:    {routed.get('route')}")
-    print(f"   Handler:  {routed.get('handler')}")
-    print(f"   Response: {routed.get('response')}")
-    print(f"   Timings:  {routed.get('timings')}\n")
+    for q in queries:
+        print(f"2. Routing Query: {q!r}...")
+        decision = make_request("POST", "/route", {"query": q})
+        print(f"   Decision: {json.dumps(decision, indent=2)}\n")
 
 
 if __name__ == "__main__":

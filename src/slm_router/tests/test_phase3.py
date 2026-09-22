@@ -78,20 +78,20 @@ class TestPhase3CloudAndRouter(unittest.TestCase):
     def test_router_measured_timings(self):
         mock_slm = MagicMock()
         mock_classifier = MagicMock()
-        mock_classifier.classify_with_raw.return_value = ("LOCAL", "LOCAL")
-        mock_slm.generate.return_value = "Local answer."
+        mock_decision = MagicMock()
+        mock_decision.model_dump.return_value = {
+            "processing": "LOCAL",
+            "memory_required": False,
+            "memory_request": None,
+        }
+        mock_classifier.classify_with_raw.return_value = (mock_decision, "raw")
 
         router = Router(slm=mock_slm, classifier=mock_classifier)
         res = router.route("What is 2+2?")
 
-        self.assertIn("timings", res)
-        self.assertIn("classification", res["timings"])
-        self.assertIn("handler", res["timings"])
-        self.assertIn("total", res["timings"])
-        self.assertIsInstance(res["timings"]["classification"], float)
-        self.assertIsInstance(res["timings"]["handler"], float)
-        self.assertIsInstance(res["timings"]["total"], float)
-        self.assertGreaterEqual(res["timings"]["total"], 0.0)
+        self.assertEqual(res["processing"], "LOCAL")
+        self.assertFalse(res["memory_required"])
+        self.assertIsNone(res["memory_request"])
 
     def test_api_key_never_exposed_in_result(self):
         secret_key = "secret-production-gemini-key-12345"

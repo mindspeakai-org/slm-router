@@ -3,10 +3,11 @@
 from contextlib import asynccontextmanager
 from typing import Any, Dict, Optional
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from slm_router.router import Router
+from slm_router.schemas import RouteDecision, InvalidModelOutputError
 
 _router_instance: Optional[Router] = None
 
@@ -34,20 +35,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="SLM Router API",
-    description="Lightweight HTTP interface for local SLM classification and 3-way routing",
-    version="0.1.0",
+    description="Lightweight HTTP service for query classification and memory requirement planning",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
 
 class QueryRequest(BaseModel):
-    query: str = Field(..., min_length=1, description="User query to classify or route")
-
-
-class ClassifyResponse(BaseModel):
-    query: str
-    label: str
-    raw_output: str
+    query: str = Field(..., min_length=1, description="User query to analyze and route")
 
 
 class HealthResponse(BaseModel):
@@ -62,14 +57,29 @@ def health(router: Router = Depends(get_router)) -> HealthResponse:
     return HealthResponse(status="healthy", model=model_name)
 
 
-@app.post("/classify", response_model=ClassifyResponse)
-def classify(request: QueryRequest, router: Router = Depends(get_router)) -> ClassifyResponse:
-    """Classify a query using the underlying ClassifierV3 without executing handlers."""
-    label, raw_output = router.classifier.classify_with_raw(request.query)
-    return ClassifyResponse(query=request.query, label=label, raw_output=raw_output)
-
-
-@app.post("/route")
+@app.post("/route", response_model=RouteDecision)
 def route(request: QueryRequest, router: Router = Depends(get_router)) -> Dict[str, Any]:
-    """Execute the full 3-way Router pipeline and return the result."""
-    return router.route(request.query)
+    """Analyze query and return structured routing and memory decision."""
+    try:
+        return router.route(request.query)
+    except InvalidModelOutputError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Model produced invalid routing output: {e}",
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+
+@app.post("/classify", response_model=RouteDecision, deprecated=True)
+def classify_deprecated(request: QueryRequest, router: Router = Depends(get_router)) -> Dict[str, Any]:
+    """Deprecated: Use /route instead. Returns the structured routing decision."""
+    try:
+        return router.route(request.query)
+    except InvalidModelOutputError as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Model produced invalid routing output: {e}",
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
